@@ -43,7 +43,7 @@ Move *Player::doMove(Move *opponentsMove, int msLeft) {
     board->doMove(opponentsMove, otherSide);
     
     //get all possible moves
-    std::vector<Move*> legalMoves = board.getAllLegalMoves(playerSide);
+    std::vector<Move*> legalMoves = board->getLegalMoves(playerSide);
     if (legalMoves.size() == 0)
 		return NULL; //no legal Moves, thus pass
     
