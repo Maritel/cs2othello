@@ -1,3 +1,4 @@
+#include <iostream> //probably necessary later, edit to check commit
 #include "player.h"
 
 /*
