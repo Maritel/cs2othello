@@ -32,7 +32,7 @@ public:
 
     void setBoard(char data[]);
     
-    std::vector<Move*> getLegalMoves(Side side);
+    std::vector<Move> getLegalMoves(Side side);
 };
 
 #endif

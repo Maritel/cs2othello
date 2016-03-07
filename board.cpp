@@ -180,16 +180,16 @@ void Board::setBoard(char data[]) {
 }
 
 /*
- * Returns all legal moves in the current board state for a given side.
+ * Returns all legal moves for a given side.
  */
-std::vector<Move*> Board::getLegalMoves(Side side) {
-	std::vector<Move*> legalMoves;
-	for (int i = 0; i < 8; i++) {
-        for (int j = 0; j < 8; j++) {
-            Move move(i, j);
-            if (checkMove(&move, side))
-				legalMoves.push_back(&move);
-        }
-    }
-    return legalMoves;
+std::vector<Move> Board::getLegalMoves(Side side) {
+	std::vector<Move> legalMoves;
+	for (int r = 0; r < 8; r++) {
+		for (int c = 0; c < 8; c++) {
+			Move candidateMove(r,c);
+			if (checkMove(&candidateMove, side))
+				legalMoves.push_back(candidateMove);
+		}
+	}
+	return legalMoves;
 }

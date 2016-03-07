@@ -17,6 +17,7 @@ Player::Player(Side side) {
     board = new Board();
     playerSide = side;
     otherSide = (playerSide == BLACK) ? WHITE : BLACK;
+    
     srand(time(NULL)); //one seed for the entire game
 }
 
@@ -38,17 +39,25 @@ Player::~Player() {
  * The move returned must be legal; if there are no valid moves for your side,
  * return NULL.
  */
-Move *Player::doMove(Move *opponentsMove, int msLeft) {
+Move* Player::doMove(Move *opponentsMove, int msLeft) {
     //make opponent's move on the board
     board->doMove(opponentsMove, otherSide);
     
-    //get all possible moves
-    std::vector<Move*> legalMoves = board->getLegalMoves(playerSide);
-    if (legalMoves.size() == 0)
-		return NULL; //no legal Moves, thus pass
+    
+    //get all possible moves for the player
+    std::vector<Move> legalMoves = board->getLegalMoves(playerSide);
+	
+	if (legalMoves.size() == 0) { //if no legal moves, pass
+		return NULL;
+	}
     
     //pick one at random
-    int index = rand() % legalMoves.size();
+    int randomIndex = rand() % legalMoves.size();
+    Move selectedMove = legalMoves[randomIndex];
+    Move * finalMove = new Move(selectedMove.getX(), selectedMove.getY());
     
-    return legalMoves[index];
+    //do my own move
+    board->doMove(finalMove, playerSide);
+    
+    return finalMove;
 }
