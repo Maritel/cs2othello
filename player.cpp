@@ -1,4 +1,3 @@
-#include <iostream> //probably necessary later, edit to check commit
 #include "player.h"
 
 /*
@@ -15,6 +14,10 @@ Player::Player(Side side) {
      * precalculating things, etc.) However, remember that you will only have
      * 30 seconds.
      */
+    board = new Board();
+    playerSide = side;
+    otherSide = (playerSide == BLACK) ? WHITE : BLACK;
+    srand(time(NULL)); //one seed for the entire game
 }
 
 /*
@@ -36,9 +39,16 @@ Player::~Player() {
  * return NULL.
  */
 Move *Player::doMove(Move *opponentsMove, int msLeft) {
-    /* 
-     * TODO: Implement how moves your AI should play here. You should first
-     * process the opponent's opponents move before calculating your own move
-     */ 
-    return NULL;
+    //make opponent's move on the board
+    board->doMove(opponentsMove, otherSide);
+    
+    //get all possible moves
+    std::vector<Move*> legalMoves = board.getAllLegalMoves(playerSide);
+    if (legalMoves.size() == 0)
+		return NULL; //no legal Moves, thus pass
+    
+    //pick one at random
+    int index = rand() % legalMoves.size();
+    
+    return legalMoves[index];
 }
