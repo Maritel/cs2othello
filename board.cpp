@@ -179,30 +179,6 @@ void Board::setBoard(char data[]) {
     }
 }
 
-/*
- * Returns all legal moves for a given side.
- */
-std::vector<Move> Board::getLegalMoves(Side side) {
-	std::vector<Move> legalMoves;
-	for (int r = 0; r < 8; r++) {
-		for (int c = 0; c < 8; c++) {
-			Move candidateMove(r,c);
-			if (checkMove(&candidateMove, side))
-				legalMoves.push_back(candidateMove);
-		}
-	}
-	return legalMoves;
-}
-
-int Board::getStoneDifference(Side side) {
-	if (side == BLACK) {
-		return countBlack() - countWhite();
-	}
-	else {
-		return countWhite() - countBlack();
-	}
-}
-
 
 /*
  * Unsafe; only to be used when the move has already been checked to be valid by checkMove()
@@ -251,6 +227,23 @@ void Board::doMoveUnchecked(Move* m, Side side) {
 void Board::undoMove(Move * move) {
 	int x = move->getX();
 	int y = move->getY();
+	//~ std::cerr << "Resetting (" << x << "," << y << ")" << std::endl;
 	taken.reset(x + 8*y);
 	black.reset(x + 8*y);
+}
+
+/*
+ * scored by stone difference
+ */ 
+int Board::getScore(Side side) {
+	return getStoneDifference(side);
+}
+
+int Board::getStoneDifference(Side side) {
+	if (side == BLACK) {
+		return countBlack() - countWhite();
+	}
+	else {
+		return countWhite() - countBlack();
+	}
 }

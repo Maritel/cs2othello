@@ -35,13 +35,14 @@ public:
     /*
      * EXTRA METHODS
      */   
-    std::vector<Move> getLegalMoves(Side side);
     
     //unsafe move methods
     void doMoveUnchecked(Move *m, Side side);
     void undoMove(Move *m);
     
     //heuristics
+    int getScore(Side side); //general method
+    
     int getStoneDifference(Side side);
 };
 

@@ -18,8 +18,11 @@ Player::Player(Side side) {
     playerSide = side;
     otherSide = (playerSide == BLACK) ? WHITE : BLACK;
     
+    //initialize the list of possible moves
+    
     srand(time(NULL)); //one seed for the entire game
 }
+
 
 /*
  * Destructor for the player.
@@ -44,41 +47,97 @@ Move* Player::doMove(Move *opponentsMove, int msLeft) {
     //make opponent's move on the board
     board->doMove(opponentsMove, otherSide);
     
+    MoveInfo * moveInfo = getBestMove(board, playerSide, 2);
     
-    //get all possible moves for the player
-    std::vector<Move> legalMoves = board->getLegalMoves(playerSide);
-	
-	if (legalMoves.size() == 0) { //if no legal moves, pass
-		return NULL;
-	}
     
-    //spawn copy of a board for testing
-    int bestScore = INT_MIN;
-    Move bestMove = legalMoves[0];
-    Board * testBoard = board->copy();
-    for (unsigned int i = 0; i < legalMoves.size(); i++) {
-		Move candidateMove = legalMoves[i];
-		testBoard->doMoveUnchecked(&candidateMove, playerSide);
-		int score = testBoard->getStoneDifference(playerSide);
-		if (score > bestScore) {
-			bestScore = score;
-			bestMove = candidateMove;
-		}
-		testBoard->undoMove(&candidateMove);
-	}
-	delete testBoard;
-	
-	Move * finalMove = new Move(bestMove.getX(), bestMove.getY());
-	
     //do my own move
-    board->doMove(finalMove, playerSide);
-    
-    return finalMove;
+	board->doMove(moveInfo->move, playerSide);
+	
+    return moveInfo->move;
+}
+
+void Player::setBoard(Board * otherBoard) {
+	board = otherBoard;
 }
 
 /*
  * helper method for recursion of doMove()
+ * 
+ * lookDepth must be positive
  */
-Move* Player::getBestMove(Board * board, Side side, int lookDepth) {
-	return NULL;
+MoveInfo* Player::getBestMove(Board * board, Side side, int lookDepth) {
+	if (lookDepth == 1) {
+		std::vector<Move*> legalMoves = getLegalMoves(board, side); //get all legal moves
+		if (legalMoves.size() == 0)
+			return new MoveInfo(NULL, board->getScore(side)); //if there are no legal moves, pass
+		
+		//spawn copy of a board for testing
+		Board * testBoard = board->copy();
+		int bestScore = INT_MIN; //best score so far
+		Move * bestMove = NULL;
+		for (unsigned int i = 0; i < legalMoves.size(); i++) {
+			Move * candidateMove = legalMoves[i];
+			testBoard->doMoveUnchecked(candidateMove, side);
+			int score = testBoard->getScore(side); //what's the score for this move?
+			if (score > bestScore) {
+				bestScore = score;
+				bestMove = candidateMove;
+			}
+			testBoard->undoMove(candidateMove);
+		}
+		
+		
+		delete testBoard;
+		
+		for (unsigned int i = 0; i < legalMoves.size(); i++) {
+			if (legalMoves[i] != bestMove) {
+				delete legalMoves[i]; //we no longer need this anymore, so we deallocate it
+			}
+		}
+		return new MoveInfo(bestMove, bestScore);
+	}
+	
+	//assuming lookDepth > 1
+	std::vector<Move*> legalMoves = getLegalMoves(board, side);
+	if (legalMoves.size() == 0)
+		return new MoveInfo(NULL, board->getScore(side));
+	Side otherSide = (side == BLACK) ? WHITE : BLACK;
+	
+	//spawn copy of a board for testing
+	Board * testBoard = board->copy();
+	int bestScore = INT_MIN;
+	Move * bestMove = NULL;
+	for (unsigned int i = 0; i < legalMoves.size(); i++) {
+		Move * candidateMove = legalMoves[i];
+		testBoard->doMoveUnchecked(candidateMove,side);
+		//now we want to minimize it, so we just make the score negative for our purposes
+		int score = -(getBestMove(testBoard, otherSide, lookDepth - 1)->score); 
+		if (score > bestScore) {
+			bestScore = score;
+			bestMove = candidateMove;
+		}
+		testBoard->undoMove(candidateMove);
+	}
+	delete testBoard;
+	for (unsigned int i = 0; i < legalMoves.size(); i++) {
+		if (legalMoves[i] != bestMove) {
+			delete legalMoves[i]; //we no longer need this anymore, so we deallocate it
+		}
+	}
+	return new MoveInfo(bestMove, bestScore);
+}
+
+/*
+ * helper method which gives all the legal moves
+ */
+std::vector<Move*> Player::getLegalMoves(Board * board, Side side) {
+	std::vector<Move*> legalMoves;
+	for (int r = 0; r < 8; r++) {
+		for (int c = 0; c < 8; c++) {
+			Move candidateMove(r,c);
+			if (board->checkMove(&candidateMove, side))
+				legalMoves.push_back(new Move(candidateMove.getX(), candidateMove.getY()));
+		}
+	}
+	return legalMoves;
 }
