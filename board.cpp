@@ -202,3 +202,55 @@ int Board::getStoneDifference(Side side) {
 		return countWhite() - countBlack();
 	}
 }
+
+
+/*
+ * Unsafe; only to be used when the move has already been checked to be valid by checkMove()
+ * Same as doMove(), but skips checkMove()
+ */
+void Board::doMoveUnchecked(Move* m, Side side) {
+	// A NULL move means pass.
+    if (m == NULL) return;
+
+    // Ignore if move is invalid.
+    if (!checkMove(m, side)) return;
+
+    int X = m->getX();
+    int Y = m->getY();
+    Side other = (side == BLACK) ? WHITE : BLACK;
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            if (dy == 0 && dx == 0) continue;
+
+            int x = X;
+            int y = Y;
+            do {
+                x += dx;
+                y += dy;
+            } while (onBoard(x, y) && get(other, x, y));
+
+            if (onBoard(x, y) && get(side, x, y)) {
+                x = X;
+                y = Y;
+                x += dx;
+                y += dy;
+                while (onBoard(x, y) && get(other, x, y)) {
+                    set(side, x, y);
+                    x += dx;
+                    y += dy;
+                }
+            }
+        }
+    }
+    set(side, X, Y);
+}
+
+/*
+ * Highly unsafe, just sets the square specified by the move to be unoccupied.
+ */ 
+void Board::undoMove(Move * move) {
+	int x = move->getX();
+	int y = move->getY();
+	taken.reset(x + 8*y);
+	black.reset(x + 8*y);
+}

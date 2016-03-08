@@ -55,17 +55,18 @@ Move* Player::doMove(Move *opponentsMove, int msLeft) {
     //spawn copy of a board for testing
     int bestScore = INT_MIN;
     Move bestMove = legalMoves[0];
+    Board * testBoard = board->copy();
     for (unsigned int i = 0; i < legalMoves.size(); i++) {
 		Move candidateMove = legalMoves[i];
-		Board * testBoard = board->copy();
-		testBoard->doMove(&candidateMove, playerSide);
+		testBoard->doMoveUnchecked(&candidateMove, playerSide);
 		int score = testBoard->getStoneDifference(playerSide);
 		if (score > bestScore) {
 			bestScore = score;
 			bestMove = candidateMove;
 		}
-		delete testBoard;
+		testBoard->undoMove(&candidateMove);
 	}
+	delete testBoard;
 	
 	Move * finalMove = new Move(bestMove.getX(), bestMove.getY());
 	
@@ -73,4 +74,11 @@ Move* Player::doMove(Move *opponentsMove, int msLeft) {
     board->doMove(finalMove, playerSide);
     
     return finalMove;
+}
+
+/*
+ * helper method for recursion of doMove()
+ */
+Move* Player::getBestMove(Board * board, Side side, int lookDepth) {
+	return NULL;
 }

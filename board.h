@@ -37,6 +37,10 @@ public:
      */   
     std::vector<Move> getLegalMoves(Side side);
     
+    //unsafe move methods
+    void doMoveUnchecked(Move *m, Side side);
+    void undoMove(Move *m);
+    
     //heuristics
     int getStoneDifference(Side side);
 };
