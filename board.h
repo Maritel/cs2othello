@@ -32,7 +32,13 @@ public:
 
     void setBoard(char data[]);
     
+    /*
+     * EXTRA METHODS
+     */   
     std::vector<Move> getLegalMoves(Side side);
+    
+    //heuristics
+    int getStoneDifference(Side side);
 };
 
 #endif

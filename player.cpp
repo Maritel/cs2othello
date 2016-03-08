@@ -27,6 +27,7 @@ Player::Player(Side side) {
 Player::~Player() {
 }
 
+
 /*
  * Compute the next move given the opponent's last move. Your AI is
  * expected to keep track of the board on its own. If this is the first move,
@@ -51,11 +52,23 @@ Move* Player::doMove(Move *opponentsMove, int msLeft) {
 		return NULL;
 	}
     
-    //pick one at random
-    int randomIndex = rand() % legalMoves.size();
-    Move selectedMove = legalMoves[randomIndex];
-    Move * finalMove = new Move(selectedMove.getX(), selectedMove.getY());
-    
+    //spawn copy of a board for testing
+    int bestScore = INT_MIN;
+    Move bestMove = legalMoves[0];
+    for (unsigned int i = 0; i < legalMoves.size(); i++) {
+		Move candidateMove = legalMoves[i];
+		Board * testBoard = board->copy();
+		testBoard->doMove(&candidateMove, playerSide);
+		int score = testBoard->getStoneDifference(playerSide);
+		if (score > bestScore) {
+			bestScore = score;
+			bestMove = candidateMove;
+		}
+		delete testBoard;
+	}
+	
+	Move * finalMove = new Move(bestMove.getX(), bestMove.getY());
+	
     //do my own move
     board->doMove(finalMove, playerSide);
     

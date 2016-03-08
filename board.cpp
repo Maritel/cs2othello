@@ -193,3 +193,12 @@ std::vector<Move> Board::getLegalMoves(Side side) {
 	}
 	return legalMoves;
 }
+
+int Board::getStoneDifference(Side side) {
+	if (side == BLACK) {
+		return countBlack() - countWhite();
+	}
+	else {
+		return countWhite() - countBlack();
+	}
+}

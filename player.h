@@ -3,6 +3,7 @@
 
 #include <iostream>
 #include <vector>
+#include <climits>
 #include "common.h"
 #include "board.h"
 #include <cstdlib>
