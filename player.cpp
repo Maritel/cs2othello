@@ -49,10 +49,8 @@ Move* Player::doMove(Move *opponentsMove, int msLeft) {
     
     MoveInfo * moveInfo = getBestMove(board, playerSide, 2);
     
-    
     //do my own move
 	board->doMove(moveInfo->move, playerSide);
-	
     return moveInfo->move;
 }
 
@@ -105,17 +103,22 @@ MoveInfo* Player::getBestMove(Board * board, Side side, int lookDepth) {
 	
 	//spawn copy of a board for testing
 	Board * testBoard = board->copy();
-	int bestScore = INT_MIN;
+	int alpha = INT_MIN;
+	int beta = INT_MAX;
 	Move * bestMove = NULL;
 	for (unsigned int i = 0; i < legalMoves.size(); i++) {
 		Move * candidateMove = legalMoves[i];
 		testBoard->doMoveUnchecked(candidateMove,side);
 		//now we want to minimize it, so we just make the score negative for our purposes
 		int score = -(getBestMove(testBoard, otherSide, lookDepth - 1)->score); 
-		if (score > bestScore) {
-			bestScore = score;
+		if (score > alpha) {
+			alpha = score;
 			bestMove = candidateMove;
 		}
+		if (score < beta)
+			beta = score;
+		//~ if (alpha > beta)
+			//~ break; //no longer need to examine this subtree
 		testBoard->undoMove(candidateMove);
 	}
 	delete testBoard;
@@ -124,7 +127,7 @@ MoveInfo* Player::getBestMove(Board * board, Side side, int lookDepth) {
 			delete legalMoves[i]; //we no longer need this anymore, so we deallocate it
 		}
 	}
-	return new MoveInfo(bestMove, bestScore);
+	return new MoveInfo(bestMove, alpha);
 }
 
 /*

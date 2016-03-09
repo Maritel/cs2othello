@@ -44,6 +44,7 @@ public:
     int getScore(Side side); //general method
     
     int getStoneDifference(Side side);
+    int getWeightedDifference(Side side);
 };
 
 #endif
