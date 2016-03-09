@@ -3,6 +3,7 @@
 
 #include <vector>
 #include <climits>
+#include <algorithm>
 #include "common.h"
 #include "board.h"
 #include <cstdlib>
@@ -43,8 +44,11 @@ public:
     // Flag to tell if the player is running within the test_minimax context
     bool testingMinimax;
     
-    MoveInfo* getBestMove(Board * board, Side side, int lookDepth); 
+    // heuristics
+    int getScore(Board * board);
+    int getStoneDifference(Board * board);
     
+    MoveInfo* alphaBeta(Board * board, int depth, int alpha, int beta, bool isPlayerSide);
     std::vector<Move*> getLegalMoves(Board * board, Side side);
     
 };

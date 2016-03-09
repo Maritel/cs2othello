@@ -221,65 +221,9 @@ void Board::doMoveUnchecked(Move* m, Side side) {
     set(side, X, Y);
 }
 
-/*
- * Highly unsafe, just sets the square specified by the move to be unoccupied.
- */ 
-void Board::undoMove(Move * move) {
-	int x = move->getX();
-	int y = move->getY();
-	//~ std::cerr << "Resetting (" << x << "," << y << ")" << std::endl;
+void Board::undoMove(Move * m) {
+	int x = m->getX();
+	int y = m->getY();
 	taken.reset(x + 8*y);
-	black.reset(x + 8*y);
-}
-
-/*
- * scored by stone difference
- */ 
-int Board::getScore(Side side) {
-	return getStoneDifference(side);
-}
-
-int Board::getStoneDifference(Side side) {
-	if (side == BLACK) {
-		return countBlack() - countWhite();
-	}
-	else {
-		return countWhite() - countBlack();
-	}
-}
-
-int Board::getWeightedDifference(Side side) {
-	int blackScore = 0;
-	int whiteScore = 0;
-	for (int i = 0; i < 8; i++) {
-		for (int j = 0; j < 8; j++) {
-			if (occupied(i,j)) {
-				int weight;
-				if ((i == 0 || i == 7) && (j == 0 || j == 7)) //corners
-					weight = 5;
-				else if ((i == 2 || i == 5) && (j == 2 || j == 5)) 
-					weight = 2;
-				else if ((i == 1 || i == 6) && (j == 1 || j == 6)) //diagonally adjacent to corners
-					weight = -3;
-				else if ((i == 1 || i == 6) && (j == 0 || j == 7)) //horizontally adjacent to corners
-					weight = -2;
-				else if ((i == 0 || i == 7) && (j == 1 || j == 6)) //vertically adjacent to corners
-					weight = -2;
-				else if ((i == 0 || i == 7) || (j == 0 || j == 7)) //edges, but not any of the above
-					weight = 3;
-				else
-					weight = 1;
-				
-				if(get(BLACK,i,j))
-					blackScore += weight;
-				else
-					whiteScore += weight;
-			}
-		}
-	}
-	if (side == BLACK)
-		return blackScore - whiteScore;
-	else
-		return whiteScore - blackScore;
-	
+    black.reset(x + 8*y);
 }

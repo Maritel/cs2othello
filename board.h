@@ -39,12 +39,6 @@ public:
     //unsafe move methods
     void doMoveUnchecked(Move *m, Side side);
     void undoMove(Move *m);
-    
-    //heuristics
-    int getScore(Side side); //general method
-    
-    int getStoneDifference(Side side);
-    int getWeightedDifference(Side side);
 };
 
 #endif

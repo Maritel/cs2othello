@@ -47,88 +47,90 @@ Move* Player::doMove(Move *opponentsMove, int msLeft) {
     //make opponent's move on the board
     board->doMove(opponentsMove, otherSide);
     
-    MoveInfo * moveInfo = getBestMove(board, playerSide, 2);
+    Move* alphaBetaMove = alphaBeta(board, 4, INT_MIN, INT_MAX, playerSide)->move;
     
     //do my own move
-	board->doMove(moveInfo->move, playerSide);
-    return moveInfo->move;
+	board->doMove(alphaBetaMove, playerSide);
+    return alphaBetaMove;
 }
 
 void Player::setBoard(Board * otherBoard) {
 	board = otherBoard;
 }
 
-/*
- * helper method for recursion of doMove()
- * 
- * lookDepth must be positive
- */
-MoveInfo* Player::getBestMove(Board * board, Side side, int lookDepth) {
-	if (lookDepth == 1) {
-		std::vector<Move*> legalMoves = getLegalMoves(board, side); //get all legal moves
+MoveInfo* Player::alphaBeta(Board * board, int depth, int alpha, int beta, bool isPlayerSide) {
+	if (depth == 0) 
+		return new MoveInfo(NULL, getScore(board));
+	
+	if (isPlayerSide) {
+		std::vector<Move*> legalMoves = getLegalMoves(board, playerSide);
 		if (legalMoves.size() == 0)
-			return new MoveInfo(NULL, board->getScore(side)); //if there are no legal moves, pass
+			return new MoveInfo(NULL, getScore(board));
 		
-		//spawn copy of a board for testing
 		Board * testBoard = board->copy();
-		int bestScore = INT_MIN; //best score so far
 		Move * bestMove = NULL;
+		int bestScore = INT_MIN;
 		for (unsigned int i = 0; i < legalMoves.size(); i++) {
 			Move * candidateMove = legalMoves[i];
-			testBoard->doMoveUnchecked(candidateMove, side);
-			int score = testBoard->getScore(side); //what's the score for this move?
+			testBoard->doMoveUnchecked(candidateMove, playerSide);
+			int score = alphaBeta(testBoard, depth - 1, alpha, beta, false)->score;
 			if (score > bestScore) {
 				bestScore = score;
 				bestMove = candidateMove;
 			}
+			alpha = std::max(alpha, bestScore);
 			testBoard->undoMove(candidateMove);
+			if (alpha >= beta)
+				break;
 		}
-		
-		
 		delete testBoard;
+		for (unsigned int i = 0; i < legalMoves.size(); i++)
+			if (legalMoves[i] != bestMove)
+				delete legalMoves[i];
 		
-		for (unsigned int i = 0; i < legalMoves.size(); i++) {
-			if (legalMoves[i] != bestMove) {
-				delete legalMoves[i]; //we no longer need this anymore, so we deallocate it
-			}
-		}
 		return new MoveInfo(bestMove, bestScore);
 	}
-	
-	//assuming lookDepth > 1
-	std::vector<Move*> legalMoves = getLegalMoves(board, side);
-	if (legalMoves.size() == 0)
-		return new MoveInfo(NULL, board->getScore(side));
-	Side otherSide = (side == BLACK) ? WHITE : BLACK;
-	
-	//spawn copy of a board for testing
-	Board * testBoard = board->copy();
-	int alpha = INT_MIN;
-	int beta = INT_MAX;
-	Move * bestMove = NULL;
-	for (unsigned int i = 0; i < legalMoves.size(); i++) {
-		Move * candidateMove = legalMoves[i];
-		testBoard->doMoveUnchecked(candidateMove,side);
-		//now we want to minimize it, so we just make the score negative for our purposes
-		int score = -(getBestMove(testBoard, otherSide, lookDepth - 1)->score); 
-		if (score > alpha) {
-			alpha = score;
-			bestMove = candidateMove;
+	else {
+		std::vector<Move*> legalMoves = getLegalMoves(board, otherSide);
+		if (legalMoves.size() == 0)
+			return new MoveInfo(NULL, getScore(board));
+		
+		Board * testBoard = board->copy();
+		Move * worstMove = NULL;
+		int worstScore = INT_MAX;
+		for (unsigned int i = 0; i < legalMoves.size(); i++) {
+			Move * candidateMove = legalMoves[i];
+			testBoard->doMoveUnchecked(candidateMove, otherSide);
+			int score = alphaBeta(testBoard, depth - 1, alpha, beta, true)->score;
+			if (score < worstScore) {
+				worstScore = score;
+				worstMove = candidateMove;
+			}
+			beta = std::min(beta, worstScore);
+			testBoard->undoMove(candidateMove);
+			if (alpha >= beta)
+				break;
 		}
-		if (score < beta)
-			beta = score;
-		//~ if (alpha > beta)
-			//~ break; //no longer need to examine this subtree
-		testBoard->undoMove(candidateMove);
+		delete testBoard;
+		for (unsigned int i = 0; i < legalMoves.size(); i++)
+			if (legalMoves[i] != worstMove)
+				delete legalMoves[i];
+		
+		return new MoveInfo(worstMove, worstScore);
 	}
-	delete testBoard;
-	for (unsigned int i = 0; i < legalMoves.size(); i++) {
-		if (legalMoves[i] != bestMove) {
-			delete legalMoves[i]; //we no longer need this anymore, so we deallocate it
-		}
-	}
-	return new MoveInfo(bestMove, alpha);
 }
+
+int Player::getScore(Board * board) {
+	return getStoneDifference(board);
+}
+
+int Player::getStoneDifference(Board * board) {
+	if (playerSide == BLACK)
+		return board->countBlack() - board->countWhite();
+	else
+		return board->countWhite() - board->countBlack();
+}
+
 
 /*
  * helper method which gives all the legal moves
