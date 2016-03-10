@@ -11,17 +11,6 @@ using namespace std;
 
 
 
-class MoveInfo {
-public:
-	Move * move;
-	int score;
-	MoveInfo(Move * move, int score) {
-		this->move = move;
-		this->score = score;
-	}
-	
-	~MoveInfo() {}
-};
 
 class Player {
 	
@@ -44,12 +33,16 @@ public:
     // Flag to tell if the player is running within the test_minimax context
     bool testingMinimax;
     
+    std::vector<Move*> getLegalMoves(Board * board, Side side);
+    
     // heuristics
     int getScore(Board * board);
     int getStoneDifference(Board * board);
     
-    MoveInfo* alphaBeta(Board * board, int depth, int alpha, int beta, bool isPlayerSide);
-    std::vector<Move*> getLegalMoves(Board * board, Side side);
+    // two versions of alpha-beta; one version to return Move* and one to return int (scores) 
+    Move * getBestMove(Board * board, int depth, int alpha, int beta, bool isPlayerSide);
+    int getBestScore(Board * board, int depth, int alpha, int beta, bool isPlayerSide);
+    
     
 };
 
