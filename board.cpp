@@ -227,3 +227,8 @@ void Board::undoMove(Move * m) {
 	taken.reset(x + 8*y);
     black.reset(x + 8*y);
 }
+
+int Board::countEmpty() {
+	return 64 - countBlack() - countWhite();
+}
+

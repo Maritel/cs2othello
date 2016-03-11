@@ -1,5 +1,7 @@
 #include "player.h"
 
+#define NORMALIZATION_CONSTANT 10000
+
 /*
  * Constructor for the player; initialize everything here. The side your AI is
  * on (BLACK or WHITE) is passed in as "side". The constructor must finish 
@@ -45,8 +47,9 @@ Player::~Player() {
  */
 Move* Player::doMove(Move *opponentsMove, int msLeft) {
     board->doMove(opponentsMove, otherSide); //make opponent's move on the board
-    Move* selectedMove = getBestMove(board, 2, INT_MIN, INT_MAX, true); //using minimax to find best move
+    Move* selectedMove = getBestMove(board, 6, INT_MIN, INT_MAX, true); //using minimax to find best move
     board->doMove(selectedMove, playerSide); //perform my own move
+    
     return selectedMove;
 }
 
@@ -170,23 +173,6 @@ int Player::getBestScore(Board * board, int depth, int alpha, int beta, bool isP
 }
 
 
-/*
- * General function which returns an int score for the board position at the current state.
- */
-int Player::getScore(Board * board) {
-	return getStoneDifference(board);
-}
-
-/*
- * Simplest scoring heuristic: (playerSide stones) - (otherSide stones)
- */
-int Player::getStoneDifference(Board * board) {
-	if (playerSide == BLACK)
-		return board->countBlack() - board->countWhite();
-	else
-		return board->countWhite() - board->countBlack();
-}
-
 
 /*
  * Returns all legal moves for a given side.
@@ -206,4 +192,195 @@ std::vector<Move*> Player::getLegalMoves(Board * board, Side side) {
 
 void Player::setBoard(Board * otherBoard) {
 	board = otherBoard;
+}
+
+/*
+ * 
+ * HEURISTICS
+ * 
+ */
+
+
+/*
+ * General heuristic function to avoid replacing the rest of my code whenever I decide to change the heuristic.
+ */
+int Player::getScore(Board* board) {
+	int parityPart = getStoneParity(board);
+	//~ int mobilityPart = getMobilityScore(board);
+	int mobilityPart = 0;
+	int cornerPart = getCornerScore(board);
+	int stabilityPart = getStabilityScore(board);
+	return parityPart + mobilityPart + cornerPart + stabilityPart;
+}
+
+/*
+ * Simplest scoring heuristic based on the number of stones of each color.
+ */
+int Player::getStoneParity(Board* board) {
+	int playerStones = (playerSide == BLACK) ? board->countBlack() : board->countWhite();
+	int opponentStones = (playerSide == BLACK) ? board->countWhite() : board->countBlack();
+	return (NORMALIZATION_CONSTANT * (playerStones - opponentStones)) / (playerStones + opponentStones); 
+}
+
+/*
+ * Scoring heuristic based on the difference in mobility (# of legal moves) between the player and the opponent.
+ */
+int Player::getMobilityScore(Board* board) {
+	int playerMoves = 0;
+	int opponentMoves = 0;
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			Move move(i,j);
+			if (board->checkMove(&move,playerSide))
+				playerMoves++;
+			if (board->checkMove(&move,otherSide))
+				opponentMoves++;
+		}
+	}
+	if (playerMoves + opponentMoves == 0)
+		return 0;
+	else
+		return (NORMALIZATION_CONSTANT * (playerMoves - opponentMoves)) / (playerMoves + opponentMoves);
+}
+
+/*
+ * Scoring heuristic based on the number of corners captured. Attaching values to squares seems to be a questionable
+ * strategy, but one thing that remains constant is that corners are extremely important.
+ */ 
+int Player::getCornerScore(Board* board) {
+	int playerCorners = 0;
+	int opponentCorners = 0;
+	for (int i = 0; i < 8; i += 7) {
+		for (int j = 0; j < 8; j += 7) {
+			if (board->get(playerSide, i, j))
+				playerCorners++;
+			else if (board->get(otherSide, i, j))
+				opponentCorners++;
+		}
+	}
+	if (playerCorners + opponentCorners == 0)
+		return 0;
+	else
+		return (NORMALIZATION_CONSTANT * (playerCorners - opponentCorners)) / 4;
+}
+
+/*
+ * A "stable" stone is one that cannot be overturned. For example, corners are automatically stable.
+ * Stability is obtained if, for all four axes (diagonals, horizontal, and vertical), either:
+ * (1) The piece is on a boundary.
+ * (2) The axis is filled.
+ * (3) The piece is next to a stable piece of the same color.
+ * 
+ * Conditions 1 and 2 are easy to compute. Once we have obtained all the stable pieces from 1 and 2, we can repeatedly 
+ * check for more stable pieces given condition 3.
+ */
+int Player::getStabilityScore(Board* board) {
+	std::vector<bool> stablePlayer(64, false); //Position i,j will be indexed 8*i + j
+	std::vector<bool> stableOpponent(64, false);
+	/*
+	 * Check for filled rows, columns, and diagonals.
+	 */
+	std::vector<bool> filledRows(8,true);
+	std::vector<bool> filledCols(8,true);
+	//a positive diagonal's index is indicated by i+j, which can take values from 0 to 14
+	std::vector<bool> filledPosDiags(15,true);
+	//a negative diagonal's index is indicated by i-j+7
+	std::vector<bool> filledNegDiags(15,true); 
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (!(board->occupied(i,j))) {
+				filledRows[i] = false;
+				filledCols[j] = false;
+				filledPosDiags[i+j] = false;
+				filledNegDiags[i-j+7] = false;
+			}
+		}
+	}
+	
+	/*
+	 * Get all Type 1 and Type 2 stable disks
+	 */
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			bool occupied = board->occupied(i,j);
+			bool horizontalBoundary = (i == 0) || (i == 7);
+			bool verticalBoundary = (j == 0) || (j == 7);
+			bool horizontal = horizontalBoundary || filledRows[i];
+			bool vertical = verticalBoundary || filledCols[j];
+			bool posDiag = horizontalBoundary || verticalBoundary || filledPosDiags[i+j];
+			bool negDiag = horizontalBoundary || verticalBoundary || filledNegDiags[i-j+7];
+			if(occupied && horizontal && vertical && posDiag && negDiag) {
+				if (board->get(playerSide, i, j))
+					stablePlayer[8*i + j] = true;
+				else
+					stableOpponent[8*i + j] = true;
+			}
+		}
+	}
+	
+	/*
+	 * Seek disks with type 3 requirement
+	 */
+	int improvement = INT_MAX;
+	while(improvement > 0) {
+		improvement = 0;
+		for (int i = 0; i < 8; i++) {
+			for (int j = 0; j < 8; j++) {
+				if (board->get(playerSide, i, j) && !stablePlayer[8*i + j]) {
+					 
+					bool horizontalBoundary = (i == 0) || (i == 7);
+					bool verticalBoundary = (j == 0) || (j == 7);
+					bool boundary = horizontalBoundary || verticalBoundary;
+					
+					bool horizontalNeighbor = horizontalBoundary || stablePlayer[8*(i-1) + j] || stablePlayer[8*(i+1) + j];
+					bool verticalNeighbor = verticalBoundary || stablePlayer[8 * i + (j-1)] || stablePlayer[8 * i + (j+1)];
+					bool posDiagNeighbor = boundary || stablePlayer[8*(i+1) + (j-1)] || stablePlayer[8*(i-1) + (j+1)];
+					bool negDiagNeighbor = boundary || stablePlayer[8*(i-1) + (j-1)] || stablePlayer[8*(i+1) + (j+1)];
+					
+					bool horizontal = filledRows[i] || horizontalNeighbor;
+					bool vertical = filledCols[j] || verticalNeighbor;
+					bool posDiag = posDiagNeighbor || filledPosDiags[i+j];
+					bool negDiag = negDiagNeighbor || filledNegDiags[i-j+7];
+					if (horizontal && vertical && posDiag && negDiag) {
+						stablePlayer[8*i + j] = true;
+						improvement++;
+					}
+				}
+				else if (board->get(otherSide, i, j) && !stableOpponent[8*i + j]) {
+					bool horizontalBoundary = (i == 0) || (i == 7);
+					bool verticalBoundary = (j == 0) || (j == 7);
+					bool boundary = horizontalBoundary || verticalBoundary;
+					
+					bool horizontalNeighbor = horizontalBoundary || stableOpponent[8*(i-1) + j] || stableOpponent[8*(i+1) + j];
+					bool verticalNeighbor = verticalBoundary || stableOpponent[8 * i + (j-1)] || stableOpponent[8 * i + (j+1)];
+					bool posDiagNeighbor = boundary || stableOpponent[8*(i+1) + (j-1)] || stableOpponent[8*(i-1) + (j+1)];
+					bool negDiagNeighbor = boundary || stableOpponent[8*(i-1) + (j-1)] || stableOpponent[8*(i+1) + (j+1)];
+					
+					bool horizontal = filledRows[i] || horizontalNeighbor;
+					bool vertical = filledCols[j] || verticalNeighbor;
+					bool posDiag = posDiagNeighbor || filledPosDiags[i+j];
+					bool negDiag = negDiagNeighbor || filledNegDiags[i-j+7];
+					if (horizontal && vertical && posDiag && negDiag) {
+						stableOpponent[8*i + j] = true;
+						improvement++;
+					}
+				}
+			}
+		}
+	}
+	
+	int playerStableCount = 0;
+	int opponentStableCount = 0;
+	for (unsigned int i = 0; i < stablePlayer.size(); i++) {
+		if (stablePlayer[i])
+			playerStableCount++;
+		if (stableOpponent[i])
+			opponentStableCount++;
+	}
+	
+	if (playerStableCount + opponentStableCount == 0)
+		return 0;
+	else 
+		return (NORMALIZATION_CONSTANT * (playerStableCount - opponentStableCount)) / 64;
+	
 }

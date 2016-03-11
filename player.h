@@ -4,9 +4,10 @@
 #include <vector>
 #include <climits>
 #include <algorithm>
+#include <cstdlib>
+#include <cmath>
 #include "common.h"
 #include "board.h"
-#include <cstdlib>
 using namespace std;
 
 
@@ -35,13 +36,17 @@ public:
     
     std::vector<Move*> getLegalMoves(Board * board, Side side);
     
-    // heuristics
-    int getScore(Board * board);
-    int getStoneDifference(Board * board);
-    
     // two versions of alpha-beta; one version to return Move* and one to return int (scores) 
     Move * getBestMove(Board * board, int depth, int alpha, int beta, bool isPlayerSide);
     int getBestScore(Board * board, int depth, int alpha, int beta, bool isPlayerSide);
+    
+    
+    // heuristics
+    int getScore(Board* board);
+    int getStoneParity(Board* board);
+    int getMobilityScore(Board* board);
+    int getCornerScore(Board* board);
+    int getStabilityScore(Board* board);
     
     
 };

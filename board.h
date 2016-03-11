@@ -7,6 +7,8 @@
 using namespace std;
 
 class Board {
+	
+	friend class Player; //more convenient this way
    
 private:
     bitset<64> black;
@@ -36,9 +38,12 @@ public:
      * EXTRA METHODS
      */   
     
-    //unsafe move methods
+    // unsafe move methods
     void doMoveUnchecked(Move *m, Side side);
     void undoMove(Move *m);
+    
+    // helper methods
+    int countEmpty();
 };
 
 #endif
