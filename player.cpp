@@ -1,6 +1,6 @@
 #include "player.h"
 
-#define NORMALIZATION_CONSTANT 10000
+#define SCALE_CONSTANT 1000
 
 /*
  * Constructor for the player; initialize everything here. The side your AI is
@@ -129,7 +129,7 @@ int Player::getBestScore(Board * board, int depth, int alpha, int beta, bool isP
 		if (legalMoves.size() == 0)
 			return getScore(board);
 			
-		Board * testBoard = board->copy();
+		Board* testBoard = board->copy();
 		int bestScore = INT_MIN;
 		for (unsigned int i = 0; i < legalMoves.size(); i++) {
 			Move* candidateMove = legalMoves[i];
@@ -152,7 +152,7 @@ int Player::getBestScore(Board * board, int depth, int alpha, int beta, bool isP
 		if (legalMoves.size() == 0)
 			return getScore(board);
 		
-		Board * testBoard = board->copy();
+		Board* testBoard = board->copy();
 		int worstScore = INT_MAX;
 		for (unsigned int i = 0; i < legalMoves.size(); i++) {
 			Move* candidateMove = legalMoves[i];
@@ -205,27 +205,65 @@ void Player::setBoard(Board * otherBoard) {
  * General heuristic function to avoid replacing the rest of my code whenever I decide to change the heuristic.
  */
 int Player::getScore(Board* board) {
-	int parityPart = getStoneParity(board);
-	//~ int mobilityPart = getMobilityScore(board);
-	int mobilityPart = 0;
-	int cornerPart = getCornerScore(board);
-	int stabilityPart = getStabilityScore(board);
-	return parityPart + mobilityPart + cornerPart + stabilityPart;
+	int emptySquares = board->countEmpty();
+	
+	if (emptySquares > 35) {
+		//Stone parity absolutely does not matter. Mobility and position are more important.	
+		//~ int mobilityPart = getMobilityScore(board) * 5; //one legal move is worth 1/10 of a corner
+		int positionalPart = getPositionalScore(board);
+		return positionalPart;
+	}
+	else if (emptySquares > 20) {
+		int positionalPart = getPositionalScore(board);
+		int stabilityPart = getStabilityScore(board) * 40; //stables are very valuable
+		int mobilityPart = getMobilityScore(board) * 5; //mobility is slightly less important now
+		return mobilityPart + stabilityPart + positionalPart;
+	}
+	else {
+		return getStoneParity(board);
+	}
 }
 
 /*
- * Simplest scoring heuristic based on the number of stones of each color.
+ * Simple heuristic: (# of player stones) - (# of opponent stones)
  */
 int Player::getStoneParity(Board* board) {
-	int playerStones = (playerSide == BLACK) ? board->countBlack() : board->countWhite();
-	int opponentStones = (playerSide == BLACK) ? board->countWhite() : board->countBlack();
-	return (NORMALIZATION_CONSTANT * (playerStones - opponentStones)) / (playerStones + opponentStones); 
+	if (playerSide == BLACK)
+		return board->countBlack() - board->countWhite();
+	else
+		return board->countWhite() - board->countBlack();
 }
 
 /*
- * Scoring heuristic based on the difference in mobility (# of legal moves) between the player and the opponent.
+ * Adjusted by total number of stones.
+ */
+int Player::getAdjustedStoneParity(Board* board) {
+	int playerStones = (playerSide == BLACK) ? board->countBlack() : board->countWhite();
+	int opponentStones = (playerSide == BLACK) ? board->countWhite() : board->countBlack();
+	return (SCALE_CONSTANT * (playerStones - opponentStones)) / (playerStones + opponentStones); 
+}
+
+/*
+ * Mobility score is the difference in the number of legal moves between the player and the opponent.
  */
 int Player::getMobilityScore(Board* board) {
+	int score = 0;
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			Move move(i,j);
+			if (board->checkMove(&move, playerSide))
+				score++;
+			else if (board->checkMove(&move, otherSide))
+				score--;
+		}
+	}
+	return score;
+}
+
+/*
+ * Adjusted by total number of legal moves for both sides.
+ */
+int Player::getAdjustedMobilityScore(Board* board) {
 	int playerMoves = 0;
 	int opponentMoves = 0;
 	for (int i = 0; i < 8; i++) {
@@ -240,28 +278,79 @@ int Player::getMobilityScore(Board* board) {
 	if (playerMoves + opponentMoves == 0)
 		return 0;
 	else
-		return (NORMALIZATION_CONSTANT * (playerMoves - opponentMoves)) / (playerMoves + opponentMoves);
+		return (SCALE_CONSTANT * (playerMoves - opponentMoves)) / (playerMoves + opponentMoves);
 }
 
+
 /*
- * Scoring heuristic based on the number of corners captured. Attaching values to squares seems to be a questionable
- * strategy, but one thing that remains constant is that corners are extremely important.
- */ 
+ * Difference in the number of corners captured.
+ */
 int Player::getCornerScore(Board* board) {
-	int playerCorners = 0;
-	int opponentCorners = 0;
+	int score = 0;
 	for (int i = 0; i < 8; i += 7) {
 		for (int j = 0; j < 8; j += 7) {
 			if (board->get(playerSide, i, j))
-				playerCorners++;
+				score++;
 			else if (board->get(otherSide, i, j))
-				opponentCorners++;
+				score--;
 		}
 	}
-	if (playerCorners + opponentCorners == 0)
+	return score;
+	
+}
+/*
+ * Adjusted to fit to the same range.
+ */
+int Player::getAdjustedCornerScore(Board* board) {
+	return (SCALE_CONSTANT * getCornerScore(board)) / 4;
+} 
+
+const int Player::squareValues[8][8] = {
+	{99, -8, 8, 6, 6, 8, -8, 99},
+	{-8, -24, -4, -3, -3, -4, -24, -4},
+	{8, -4, 7, 4, 4, 7, -4, 8},
+	{6, -3, 4, 0, 0, 4, -3, 6},
+	{6, -3, 4, 0, 0, 4, -3, 6},
+	{8, -4, 7, 4, 4, 7, -4, 8},
+	{-8, -24, -4, -3, -3, -4, -24, -4},
+	{99, -8, 8, 6, 6, 8, -8, 99}
+};  
+
+/*
+ * Naive score function for the disk-square table.
+ * Certain squares are more valuable than others, so we rank them accordingly.
+ */
+int Player::getPositionalScore(Board* board) {
+	int score = 0;
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (board->get(playerSide,i,j)) 
+				score += squareValues[i][j];
+			else if (board->get(otherSide,i,j))
+				score -= squareValues[i][j];
+		 }
+	 }
+	 return score;
+}
+ 
+ /*
+  * Positional score, adjusted by the total number of positional points on each side.
+  */
+int Player::getAdjustedPositionalScore(Board* board) {
+	int playerScore = 0;
+	int opponentScore = 0;
+	for (int i = 0; i < 8; i++) {
+		for (int j = 0; j < 8; j++) {
+			if (board->get(playerSide,i,j)) 
+				playerScore += squareValues[i][j];
+			else if (board->get(otherSide,i,j))
+				opponentScore += squareValues[i][j];
+		}
+	}
+	if (playerScore + opponentScore == 0)
 		return 0;
 	else
-		return (NORMALIZATION_CONSTANT * (playerCorners - opponentCorners)) / 4;
+		return (SCALE_CONSTANT * (playerScore - opponentScore))/(playerScore + opponentScore);
 }
 
 /*
@@ -381,6 +470,13 @@ int Player::getStabilityScore(Board* board) {
 	if (playerStableCount + opponentStableCount == 0)
 		return 0;
 	else 
-		return (NORMALIZATION_CONSTANT * (playerStableCount - opponentStableCount)) / 64;
-	
+		return playerStableCount - opponentStableCount;
+}
+
+
+/*
+ * Stability score, adjusted by the total number of squares on the board.
+ */
+int Player::getAdjustedStabilityScore(Board * board) {
+	return (SCALE_CONSTANT * getStabilityScore(board)) / 64;
 }

@@ -41,12 +41,26 @@ public:
     int getBestScore(Board * board, int depth, int alpha, int beta, bool isPlayerSide);
     
     
-    // heuristics
+    /*
+     * HEURISTICS
+     */
     int getScore(Board* board);
+    
     int getStoneParity(Board* board);
+    int getAdjustedStoneParity(Board* board);
+    
     int getMobilityScore(Board* board);
+    int getAdjustedMobilityScore(Board* board);
+    
     int getCornerScore(Board* board);
+    int getAdjustedCornerScore(Board* board);
+    
+    static const int squareValues[8][8];
+    int getPositionalScore(Board* board);
+    int getAdjustedPositionalScore(Board* board);
+    
     int getStabilityScore(Board* board);
+    int getAdjustedStabilityScore(Board* board);
     
     
 };
