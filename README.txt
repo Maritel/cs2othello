@@ -1,12 +1,37 @@
 Hi, I am Andrew Ding.
 
+Several notes:
+
+(1) I tried many other heuristic functions, but many were not useful. The four heuristic functions that I finally 
+used were:
+positional score: score based off a value map of the squares
+stone parity: raw difference in the number of stones between the player and the opponent
+stability score: score based off of the number of "stable" (un-switchable) stones
+mobility score: score based off of the number of legal moves available
+
+(2) The most important change I made was making the heuristic dependent on the number of empty squares. The board 
+needs to be considered differently depending on the stage of the game. In the extreme late game, only stone parity 
+(the raw number of stones for each side) matters, while at the early stage stone parity barely matters. My final 
+heuristic function prioritizes positional score in the early game and stone parity in the late game. In the midgame 
+there's a mix of positional score, stability score, and mobility score. This outperforms any static heuristic 
+function that I have made.
+
+(3) I decided that there is no reason for me to implement iterative deepening, or to go beyond 6 depth. My AI will 
+be limited by its heuristic. Without a reliable heuristic, it is useless to look far in the future. In fact, at the end
+this is just a contest of heuristics.
+
+
 Sources:
+http://www.samsoft.org.uk/reversi/strategy.htm#evaporate [Value map comes from here.]
 
-https://kartikkukreja.wordpress.com/2013/03/30/heuristic-function-for-reversiothello (Note: I did not look 
-at the actual source code, only the mathematical formulas. It was especially useful because it provided a way to 
-normalize the different measurements.)
+http://www.soongsky.com/en/strategy2/ch3.php
 
-http://www.cs.cornell.edu/~yuli/othello/othello.html (Description of a simple heuristic function)
+http://www.cs.cornell.edu/~yuli/othello/othello.html
+
+
+
+
+
 
 Here are a list of heuristics I tried. They are all linear combinations of the "basic" heuristics (like stone 
 difference, positional score, mobility score, etc.). I tested them all as black, supposedly the disadvantaged side, 
